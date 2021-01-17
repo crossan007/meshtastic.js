@@ -447,58 +447,18 @@ export abstract class IMeshDevice {
    * @param meshPacket
    */
   private handleMeshPacket(meshPacket: MeshPacket) {
-    /**
-     * Text messages
-     */
-    if (meshPacket.decoded.data.portnum === PortNumEnum.TEXT_MESSAGE_APP) {
-      const text = new TextDecoder().decode(meshPacket.decoded.data.payload);
-      log(
-        `IMeshDevice.handleMeshPacket`,
-        "Sending onTextPacketEvent",
-        LogLevelEnum.DEBUG
-      );
-      this.onTextPacketEvent.next({
-        packet: meshPacket,
-        data: text,
-      });
-    } else if (meshPacket.decoded.data.portnum === PortNumEnum.NODEINFO_APP) {
-      /**
-       * Node Info
-       */
-      const nodeInfo = NodeInfo.decode(meshPacket.decoded.data.payload);
-      log(
-        `IMeshDevice.handleMeshPacket`,
-        "Sending onNodeInfoPacketEvent",
-        LogLevelEnum.DEBUG
-      );
-      this.onNodeInfoPacketEvent.next({
-        packet: meshPacket,
-        data: nodeInfo,
-      });
-    } else if (meshPacket.decoded.data.portnum === PortNumEnum.POSITION_APP) {
-      /**
-       * Position
-       */
-      log(
-        `IMeshDevice.handleMeshPacket`,
-        "Sending onPositionPacketEvent",
-        LogLevelEnum.DEBUG
-      );
-      const position = Position.decode(meshPacket.decoded.data.payload);
-      this.onPositionPacketEvent.next({
-        packet: meshPacket,
-        data: position,
-      });
-    } else {
-      /**
-       * All other portnums
-       */
-      log(
-        `IMeshDevice.handleMeshPacket`,
-        "Sending onDataPacketEvent",
-        LogLevelEnum.DEBUG
-      );
-      this.onDataPacketEvent.next(meshPacket);
+    if (meshPacket.decoded.hasOwnProperty("data")) {
+      if (!meshPacket.decoded.data.hasOwnProperty("portnum")) {
+        meshPacket.decoded.data.portnum = PortNumEnum.UNKNOWN_APP;
+      }
+
+      this.onDataPacketEvent.emit(meshPacket, this.myEmitOptions);
+    } else if (meshPacket.decoded.hasOwnProperty("user")) {
+      this.nodes.addUserData(meshPacket.from, meshPacket.decoded.user);
+      this.onUserPacketEvent.emit(meshPacket, this.myEmitOptions);
+    } else if (meshPacket.decoded.hasOwnProperty("position")) {
+      this.nodes.addPositionData(meshPacket.from, meshPacket.decoded.position);
+      this.onPositionPacketEvent.emit(meshPacket, this.myEmitOptions);
     }
   }
 
