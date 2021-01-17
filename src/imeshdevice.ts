@@ -511,11 +511,6 @@ export abstract class IMeshDevice {
         meshPacket.decoded.data.portnum = PortNumEnum.UNKNOWN_APP;
       }
 
-      let pckDat = meshPacket.decoded.data;
-      if (pckDat.portnum === PortNumEnum.TEXT_MESSAGE_APP) {
-        pckDat.payload = new TextDecoder().decode(pckDat.payload as Uint8Array);
-      }
-
       this.onDataPacketEvent.emit(meshPacket, this.myEmitOptions);
     } else if (meshPacket.decoded.hasOwnProperty("user")) {
       this.nodes.addUserData(meshPacket.from, meshPacket.decoded.user);

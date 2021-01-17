@@ -90,6 +90,21 @@ export class Data extends Message<Data> {
 
   @Field.d(2, "bytes")
   payload: Uint8Array | string;
+
+  // starting with 1.20, the portnum defines how to
+  // interpret the bytes in payload.
+  // let's handle a few of the well-known app data structures here
+  GetAppDataMessage() {
+    if (this.portnum == PortNumEnum.TEXT_MESSAGE_APP) {
+      return new TextDecoder().decode(this.payload as Uint8Array);
+    }
+    if (this.portnum == PortNumEnum.NODEINFO_APP) {
+      return User.decode(this.payload as Uint8Array);
+    } else if (this.portnum == PortNumEnum.POSITION_APP) {
+      return Position.decode(this.payload as Uint8Array);
+    }
+    return {};
+  }
 }
 
 /**
@@ -308,13 +323,13 @@ export class UserPreferences extends Message<UserPreferences> {
 
   @Field.d(38, "bool")
   isLowPower: boolean;
-  
+
   @Field.d(39, "bool")
   fixedPosition: boolean;
 
   @Field.d(100, "bool")
   factoryReset: boolean;
-  
+
   @Field.d(101, "bool")
   debugLogEnabled: boolean;
 
