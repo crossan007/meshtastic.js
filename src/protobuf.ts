@@ -1,5 +1,5 @@
 /**
- * Current as of Meshtastic-protobufs #8729bad7f6cfa461be02e3ea65fbde29435b3fe3
+ * Current as of Meshtastic-protobufs #855da8701edbb19818069ad8545d5b9f030bb33f
  */
 
 import { Message, Field, OneOf, Type } from "protobufjs/light";
@@ -57,6 +57,47 @@ export enum LocationSharingEnum {
   LocUnset = 0,
   LocEnabled = 1,
   LocDisabled = 2,
+}
+
+export enum ChargeCurrentEnum {
+  MAUnset = 0,
+  MA100 = 1,
+  MA190 = 2,
+  MA280 = 3,
+  MA360 = 4,
+  MA450 = 5,
+  MA550 = 6,
+  MA630 = 7,
+  MA700 = 8,
+  MA780 = 9,
+  MA880 = 10,
+  MA960 = 11,
+  MA1000 = 12,
+  MA1080 = 13,
+  MA1160 = 14,
+  MA1240 = 15,
+  MA1320 = 16,
+}
+
+export enum CriticalErrorCodeEnum {
+  None = 0,
+  TxWatchdog = 1,
+  SleepEnterWait = 2,
+  NoRadio = 3,
+  Unspecified = 4,
+  UBloxInitFailed = 5,
+  NoAXP192 = 6,
+  InvalidRadioSetting = 7,
+}
+
+export enum LogLevelEnum {
+  UNSET = 0,
+  CRITICAL = 50,
+  ERROR = 40,
+  WARNING = 30,
+  INFO = 20,
+  DEBUG = 10,
+  TRACE = 5,
 }
 
 /**
@@ -219,6 +260,9 @@ export class MeshPacket extends Message<MeshPacket> {
   @Field.d(3, SubPacket)
   decoded: SubPacket;
 
+  @Field.d(4, "uint32")
+  channel_index: number;
+
   @Field.d(8, "bytes")
   encrypted: Uint8Array;
 
@@ -266,6 +310,15 @@ export class ChannelSettings extends Message<ChannelSettings> {
 
   @Field.d(5, "string")
   name: string;
+
+  @Field.d(10, "uint32")
+  id: number;
+
+  @Field.d(16, "bool")
+  uplink_enabled: boolean;
+
+  @Field.d(17, "bool")
+  downlink_enabled: boolean;
 }
 
 /**
@@ -278,9 +331,6 @@ export class UserPreferences extends Message<UserPreferences> {
 
   @Field.d(2, "uint32")
   sendOwnerInterval: number;
-
-  @Field.d(3, "uint32")
-  numMissedToFail: number;
 
   @Field.d(4, "uint32")
   waitBluetoothSecs: number;
@@ -318,6 +368,9 @@ export class UserPreferences extends Message<UserPreferences> {
   @Field.d(15, RegionCodeEnum)
   region: RegionCodeEnum;
 
+  @Field.d(16, ChargeCurrentEnum)
+  ChargeCurrent: ChargeCurrentEnum;
+
   @Field.d(37, "bool")
   isRouter: boolean;
 
@@ -347,6 +400,21 @@ export class UserPreferences extends Message<UserPreferences> {
 
   @Field.d(103, "uint32", "repeated")
   ignoreIncoming: number;
+
+  @Field.d(120, "bool")
+  serialpluginEnabled: boolean;
+
+  @Field.d(121, "bool")
+  serialpluginEcho: boolean;
+
+  @Field.d(122, "uint32")
+  serialpluginRxd: number;
+
+  @Field.d(123, "uint32")
+  serialpluginTxd: number;
+
+  @Field.d(124, "uint32")
+  serialpluginTimeout: number;
 }
 
 /**
@@ -359,6 +427,9 @@ export class RadioConfig extends Message<RadioConfig> {
   @Field.d(1, UserPreferences)
   preferences: UserPreferences;
 
+  /**
+   * @deprecated
+   */
   @Field.d(2, ChannelSettings)
   channelSettings: ChannelSettings;
 }
@@ -409,8 +480,8 @@ export class MyNodeInfo extends Message<MyNodeInfo> {
   @Field.d(6, "string")
   firmwareVersion: string;
 
-  @Field.d(7, "uint32")
-  errorCode: number;
+  @Field.d(7, CriticalErrorCodeEnum)
+  errorCode: CriticalErrorCodeEnum;
 
   @Field.d(8, "uint32")
   errorAddress: number;
@@ -435,46 +506,22 @@ export class MyNodeInfo extends Message<MyNodeInfo> {
 }
 
 /**
- * This message is never sent over the wire, but it is used for serializing DB
- * state to flash in the device code
+ * Debug output from the device.
  */
-@Type.d("DeviceState")
-export class DeviceState extends Message<DeviceState> {
-  @Field.d(1, RadioConfig)
-  radio: RadioConfig;
-
-  @Field.d(2, MyNodeInfo)
-  myNode: MyNodeInfo;
-
-  @Field.d(3, User)
-  owner: User;
-
-  @Field.d(4, NodeInfo, "repeated")
-  nodeDb: NodeInfo;
-
-  @Field.d(5, MeshPacket, "repeated")
-  receiveQueue: MeshPacket;
-
-  @Field.d(8, "uint32")
-  version: number;
-
-  @Field.d(7, MeshPacket)
-  rxTextMessage: MeshPacket;
-
-  @Field.d(9, "bool")
-  noSave: boolean;
-
-  @Field.d(11, "bool")
-  didGpsReset: boolean;
-}
-
-/**
- * Debug output from the device
- */
-@Type.d("DebugString")
-export class DebugString extends Message<DebugString> {
+@Type.d("LogRecord")
+export class LogRecord extends Message<LogRecord> {
+  //log levels
   @Field.d(1, "string")
-  message: "string";
+  message: string;
+
+  @Field.d(2, "uint32")
+  time: number;
+
+  @Field.d(3, "string")
+  source: string;
+
+  @Field.d(4, LogLevelEnum)
+  level: LogLevelEnum;
 }
 
 /**
@@ -487,18 +534,20 @@ export class FromRadio extends Message<FromRadio> {
     "myInfo",
     "nodeInfo",
     "radio",
-    "debugString",
+    "logRecord",
     "configCompleteId",
-    "rebooted"
+    "rebooted",
+    "channel"
   )
   variant:
     | MeshPacket
     | MyNodeInfo
     | NodeInfo
     | RadioConfig
-    | DebugString
+    | LogRecord
     | number
-    | boolean;
+    | boolean
+    | ChannelSettings;
 
   @Field.d(1, "uint32")
   num: number;
@@ -515,14 +564,17 @@ export class FromRadio extends Message<FromRadio> {
   @Field.d(6, RadioConfig)
   radio: RadioConfig;
 
-  @Field.d(7, DebugString)
-  debugString: DebugString;
+  @Field.d(7, LogRecord)
+  logRecord: LogRecord;
 
   @Field.d(8, "uint32")
   configCompleteId: number;
 
   @Field.d(9, "bool")
   rebooted: boolean;
+
+  @Field.d(10, ChannelSettings)
+  channel: ChannelSettings;
 }
 
 /**
@@ -530,7 +582,7 @@ export class FromRadio extends Message<FromRadio> {
  */
 @Type.d("ToRadio")
 export class ToRadio extends Message<ToRadio> {
-  @OneOf.d("packet", "wantConfigId", "setRadio", "setOwner")
+  @OneOf.d("packet", "wantConfigId", "setRadio", "setOwner", "setChannel")
   variant: MeshPacket | number | RadioConfig | User;
 
   @Field.d(1, MeshPacket)
@@ -544,23 +596,7 @@ export class ToRadio extends Message<ToRadio> {
 
   @Field.d(102, User)
   setOwner: User;
-}
 
-/**
- * Placeholder for data we will eventually set during initial programming.
- * This will allow us to stop having a load for each region.
- */
-@Type.d("ManufacturingData")
-export class ManufacturingData extends Message<ManufacturingData> {
-  @Field.d(1, "uint32")
-  fradioFreq: number;
-
-  @Field.d(2, "string")
-  hwModel: string;
-
-  @Field.d(3, "string")
-  hwVersion: string;
-
-  @Field.d(4, "sint32")
-  selftestResult: number;
+  @Field.d(103, ChannelSettings)
+  setChannel: ChannelSettings;
 }
