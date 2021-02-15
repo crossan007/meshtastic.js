@@ -22,6 +22,7 @@ export enum PortNumEnum {
   NODEINFO_APP = 4,
   REPLY_APP = 32,
   IP_TUNNEL_APP = 33,
+  ENVIRONMENTAL_MEASUREMENT_APP = 34,
   SERIAL_APP = 64,
   STORE_FORWARD_APP = 65,
   RANGE_TEST_APP = 66,
@@ -169,6 +170,8 @@ export class Data extends Message<Data> {
       return User.decode(this.payload as Uint8Array);
     } else if (this.portnum == PortNumEnum.POSITION_APP) {
       return Position.decode(this.payload as Uint8Array);
+    } else if (this.portnum == PortNumEnum.ENVIRONMENTAL_MEASUREMENT_APP) {
+      return EnvironmentalMeasurement.decode(this.payload as Uint8Array);
     }
     return {};
   }
@@ -190,6 +193,21 @@ export class User extends Message<User> {
 
   @Field.d(4, "bytes")
   macaddr: Uint8Array;
+}
+
+/**
+ * User structure contains owner information
+ */
+@Type.d("EnvironmentalMeasurement")
+export class EnvironmentalMeasurement extends Message<EnvironmentalMeasurement> {
+  @Field.d(1, "int32")
+  temperature: number;
+
+  @Field.d(2, "int32")
+  relative_humidity: number;
+
+  @Field.d(3, "int32")
+  barometric_pressure: number;
 }
 
 /**
